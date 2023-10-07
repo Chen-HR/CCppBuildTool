@@ -1,4 +1,4 @@
-# CCppBuildTool
+# C/Cpp Build Tool
 
 Tools for C/C++ compilation, construction and testing
 
