@@ -4,7 +4,7 @@ Tools for C/C++ compilation, construction and testing
 
 ## features
 
-- Can automatically identify whether there are changes in the program code (including standard or self-made function libraries) to determine whether it needs to be recompiled (different from CMake's identification of the last update time of the file)
+- Can automatically identify whether there are changes in the program code (including standard or self-made function libraries) to determine whether it needs to be recompiled
 - Configurable compilation parameters
 - Compilation is completed and can be executed automatically
 - Configurable execution parameters, standard input and output
