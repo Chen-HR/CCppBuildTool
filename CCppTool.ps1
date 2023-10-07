@@ -1,41 +1,41 @@
-# Note: FileExtension: ".cpp"
-# Usage: GNU-G++.ps1 {Compiler} {Action} {FileBasenameNoExtension} {Folder}
-$ActionList = @("preprocess", "build", "compile", "test", "test-flush")
+# Usage: CCppTool.ps1 {Compiler} {Action} {FileBasenameNoExtension} {Folder}
+# $ActionList = @("preprocess", "build", "compile", "test", "test-flush")
 $Prefix = "  - "
 $TimeFormat = "yyyy/MM/dd(K)HH:mm:ss.ffff"
 
-$Compiler = $args[0] ;
-$Action = $args[1] ;
-$FileBasenameNoExtension = $args[2] ;
+$Action = $args[0] ;
+$FileBasenameNoExtension = $args[1] ;
+$Compiler = $args[2] ;
 $Folder = $args[3] ;
+$Extension = "" ;
 
-if ( $Compiler ) { $Compiler = $Compiler } else { $Compiler = "" }
-if ( $Action ) { $Action = $Action.ToLower() } else { $Action = "" }
-if ( -not $FileBasenameNoExtension ) { $FileBasenameNoExtension = "" }
+if ( $Action ) { $Action = $Action.ToLower() } else { $Action = "" ; Write-Error "Error: no action to perform" ;}
+if ( -not $FileBasenameNoExtension ) { $FileBasenameNoExtension = "" ; Write-Error "Error: no files to process" ;}
+if ( $Compiler ) { $Compiler = $Compiler }
 if ( -not $Folder ) { $Folder = "." }
 
 $File = $Folder + "/" + $FileBasenameNoExtension
 
-if ( $Compiler -eq "" -or ( $Compiler.IndexOf($Action) -eq -1 )) 
+if ( Test-Path -Path ($File + ".c") -PathType Leaf ) 
   { 
-    Write-Error "Error: no compiler to perform" ;
-    Exit 1 ;
+    $Extension = ".c"
+    if ( -not $Compiler ) { $Compiler = "gcc" }
   }
-if ( $Action -eq "" -or ( $ActionList.IndexOf($Action) -eq -1 )) 
+elseif ( Test-Path -Path ($File + ".cpp") -PathType Leaf ) 
   { 
-    Write-Error "Error: no action to perform" ;
-    Exit 1 ;
+    $Extension = ".cpp"
+    if ( -not $Compiler ) { $Compiler = "g++" }
   }
-if ( $FileBasenameNoExtension -eq "" ) 
+else
   { 
-    Write-Error "Error: no files to process" ;
+    Write-Error "Error: File does not exist" ;
     Exit 1 ;
   }
 
 Write-Host "Running Information: " ;
 Write-Host $($Prefix + "Time: $(Get-Date -Format $TimeFormat)") ;
 Write-Host $($Prefix + "Action: $Action") ;
-Write-Host $($Prefix + "File: $File.cpp") ;
+Write-Host $($Prefix + "File: $File" + $Extension) ;
 Write-Host $($Prefix + "Folder: $Folder") ;
 if (!(Test-Path "$File/")) 
   {
@@ -69,7 +69,7 @@ if ( $Action -eq "build" -or $Action -eq "test-flush" )
   {
     Write-Host "Action: Pre-Compilation Processing";
     Write-Host $($Prefix + "Time: $(Get-Date -Format $TimeFormat)") ;
-    Write-Host $($Prefix + "File: $File.cpp") ; 
+    Write-Host $($Prefix + "File: $File" + $Extension ) ; 
     if ( Test-Path "$File/$FileBasenameNoExtension.exe" )
       {
         Write-Host $($Prefix + "Statue: Remove File: '$File/$FileBasenameNoExtension.exe'") ; 
@@ -83,9 +83,9 @@ if ( $Action -eq "preprocess" -or $Action -eq "build" -or $Action -eq "compile" 
   {
     Write-Host "Action: Expand Preprocess";
     Write-Host $($Prefix + "Time: $(Get-Date -Format $TimeFormat)") ;
-    Write-Host $($Prefix + "File: $File.cpp") ; 
-    Write-Host $($Prefix + "Statue: Generate File: '$File/Preprocess.cpp'") ;
-    $Command = "$Compiler -E -P $File.cpp -o $File/Preprocess.cpp"
+    Write-Host $($Prefix + "File: $File" + $Extension ) ; 
+    Write-Host $($Prefix + "Statue: Generate File: '$File/Preprocess$Extension'") ;
+    $Command = "$Compiler -E -P $File" + $Extension + " -o $File/Preprocess$Extension"
     if ( Test-Path "$File/Compile/Options.txt") 
       {
         $Command += " " + $( Get-Content "$File/Compile/Options.txt" -Raw)
@@ -96,15 +96,15 @@ if ( $Action -eq "preprocess" -or $Action -eq "build" -or $Action -eq "compile" 
   }
 
 # Use: "$File/Compile/Options.txt"
-# Generate: "$File/Preprocess.cpp", "$File/Compile/Command.ps1"
+# Generate: "$File/Preprocess$Extension", "$File/Compile/Command.ps1"
 if ( $Action -eq "build" -or $Action -eq "compile" -or $Action -eq "test" -or $Action -eq "test-flush" )
   {
     Write-Host "Action: Compile";
     Write-Host $($Prefix + "Time: $(Get-Date -Format $TimeFormat)") ;
-    Write-Host $($Prefix + "File: $File.cpp") ;
+    Write-Host $($Prefix + "File: $File" + $Extension ) ;
     if ( Test-Path "$File/Preprocess.Hash" ) 
       {
-        if (( $( Get-FileHash "$File/Preprocess.cpp" -Algorithm SHA256 ).Hash.ToString() -eq $( Get-Content "$File/Preprocess.Hash" -Raw) ) -and ( Test-Path "$File/$FileBasenameNoExtension.exe" ))
+        if (( $( Get-FileHash "$File/Preprocess$Extension" -Algorithm SHA256 ).Hash.ToString() -eq $( Get-Content "$File/Preprocess.Hash" -Raw) ) -and ( Test-Path "$File/$FileBasenameNoExtension.exe" ))
           {
             Write-Host $($Prefix + "State: file unchanged") ;
             $FileChanged = $False ;
@@ -130,9 +130,9 @@ if ( $Action -eq "build" -or $Action -eq "compile" -or $Action -eq "test" -or $A
           }
         # Create file hash value
         Write-Host $($Prefix + "State: Create file hash") ;
-        $( Get-FileHash "$File/Preprocess.cpp" -Algorithm SHA256 ).Hash | Out-File -FilePath "$File/Preprocess.Hash" -NoNewline ;
+        $( Get-FileHash "$File/Preprocess$Extension" -Algorithm SHA256 ).Hash | Out-File -FilePath "$File/Preprocess.Hash" -NoNewline ;
         # Build compile command
-        $Command = "$Compiler $File.cpp -o $File/$FileBasenameNoExtension.exe" ;
+        $Command = "$Compiler $File" + $Extension + " -o $File/$FileBasenameNoExtension.exe" ;
         if ( Test-Path "$File/Compile/Options.txt") 
           {
             $Command += " " + $( Get-Content "$File/Compile/Options.txt" -Raw)
@@ -155,7 +155,7 @@ if ( $Action -eq "build" -or $Action -eq "compile" -or $Action -eq "test" -or $A
   }
 
 # Use: "$File/Execute/Argument.txt", "$File/Execute/Input.txt", "$File/Execute/Output.txt", "$File/Execute/OutputHistory.txt"
-# Generate: "$File/Preprocess.cpp", "$File/Compile/Command.ps1"
+# Generate: "$File/Preprocess$Extension", "$File/Compile/Command.ps1"
 if ( $Action -eq "test" -or $Action -eq "test-flush" )
   {
     Write-Host "Action: Execute";
@@ -190,7 +190,7 @@ if ( $Action -eq "test-flush" )
 {
   Write-Host "Action: Post-Processing";
   Write-Host $($Prefix + "Time: $(Get-Date -Format $TimeFormat)") ;
-  Write-Host $($Prefix + "File: $File.cpp") ;
+  Write-Host $($Prefix + "File: $File" + $Extension ) ;
   if ( Test-Path "$File/$FileBasenameNoExtension.exe" )
     {
       Write-Host $($Prefix + "Statue: Remove File: '$File/$FileBasenameNoExtension.exe'") ; 
