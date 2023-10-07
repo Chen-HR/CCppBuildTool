@@ -64,7 +64,7 @@ if (!(Test-Path "$File/Execute/Argument.txt"))
   } 
 Write-Host "" ;
 
-# Pre-Compilation Processing
+# Pre-Processing
 if ( $Action -eq "build" -or $Action -eq "test-flush" )
   {
     Write-Host "Action: Pre-Compilation Processing";
